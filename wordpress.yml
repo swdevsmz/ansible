@@ -1,0 +1,62 @@
+---
+- name: wordpress環境構築
+  hosts: 192.168.100.111
+  #remote_user: user
+  #become: yes
+  vars:
+    wordpress_url: https://ja.wordpress.org/wordpress-4.4.2-ja.tar.gz
+
+  tasks:
+  - name: Apache（httpd）のインストール
+    yum: name=httpd state=latest
+
+  - name: firewalldでHTTPを許可
+    firewalld: permanent=True service=http state=enabled immediate=true
+
+  - name: サービスの起動
+    service: name=httpd state=started enabled=yes
+
+  - name: PHPのインストール
+    yum: name="{{item}}" state=latest
+    with_items:
+      - php
+      - php-mysql
+
+  - name: タイムゾーンの設定
+    ini_file: >
+      dest=/etc/php.ini
+      section=Date
+      option=date.timezone
+      value='"Asia/Tokyo"'
+
+  - name: phpテストページの作成
+    copy: >
+      src=roles/phpinfo.php
+      dest=/var/www/html/phpinfo.php
+
+  - name: httpサービスの再起動
+    service: name=httpd state=restarted enabled=yes
+
+  - name: MariaDBインストール
+    yum: name="{{item}}" state=latest
+    with_items:
+      - mariadb
+      - mariadb-server
+      - MySQL-python
+
+  - name: サービスの起動
+    service: name=mariadb state=started enabled=yes
+
+  - name: wordpressのダウンロード
+    get_url:
+      url= "{{ wordpress_url }}"
+      dest=/tmp/wordpress.tar.gz
+
+  - name: wordpressの展開
+    unarchive: src=/tmp/wordpress.tar.gz dest=/var/www/html/ copy=no
+
+  - name: wordpressの所有権をapacheに変更
+    file: path=/var/www/html/wordpress/ owner=apache group=apache recurse=yes
+
+  - name: httpサービスの起動
+    service: name=httpd state=restarted

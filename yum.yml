@@ -1,0 +1,10 @@
+- hosts: 192.168.100.111
+  tasks:
+    - name: installEPEL
+      yum:
+        name: epel-release
+        state: present
+      sudo: yes
+
+    - name: slcommandyuminstall
+      yum: name=sl
